@@ -14,7 +14,7 @@ h2 {
     margin: 20px 0;
 }
 
-input, button {
+input, button, select {
     width: 90%;
     max-width: 400px;
     padding: 15px;
@@ -29,6 +29,17 @@ input#inputData {
     width: auto;
 }
 
+input#inputUF {
+    width: 90%;
+    max-width: 400px;
+    padding: 15px;
+    margin: 10px 0;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+}
+
 button {
     background-color: #007BFF;
     color: white;
@@ -37,6 +48,10 @@ button {
 
 button:hover {
     background-color: #0056b3;
+}
+
+select#inputUF {
+    width: auto;
 }
 
 #resultado {

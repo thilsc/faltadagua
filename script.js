@@ -139,6 +139,23 @@
         }
     }
 
+    function validarCampos() {
+        const inputCidade = document.getElementById('inputCidade').value.trim();
+        const inputData = document.getElementById('inputData').value.trim();
+
+        if (!inputCidade) {
+            alert('Por favor, preencha o campo Cidade.');
+            return;
+        }
+
+        if (!inputData) {
+            alert('Por favor, preencha o campo Data.');
+            return;
+        }
+
+        iniciarProcesso();
+    }    
+
     document.addEventListener('DOMContentLoaded', () => {
         const inputData = document.getElementById('inputData');
         const verificarButton = document.querySelector('button[onclick="iniciarProcesso()"]');
