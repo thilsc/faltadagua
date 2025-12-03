@@ -3,22 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <title>Verificador de Falta d'água</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-        input, button { padding: 10px; margin-top: 10px; font-size: 16px; }
-        #resultado { margin-top: 20px; font-weight: bold; color: #333; }
-        .aviso { font-size: 0.8em; color: #666; margin-top: 5px; }
-    </style>
+    <link rel="stylesheet" href="./style.css">
+    <link rel="manifest" href="manifest.json">
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/service-worker.js')
+                .then(registration => {
+                    console.log('Service Worker registrado com sucesso:', registration);
+                })
+                .catch(error => {
+                    console.error('Falha ao registrar o Service Worker:', error);
+                });
+        }
+    </script>
 </head>
 <body>
 
-    <h2>Verificador de Falta d'água (Paraná/Brasil)</h2>
+    <h2>Verificador de Falta d'água</h2>
     
-    <label for="inputCidade">Insira o nome da cidade:</label><br>
+    <label for="inputCidade">Cidade (Somente PR)</label>
     <input type="text" id="inputCidade" placeholder="Ex: Curitiba" maxlength="50">
     <br>
 
-    <label for="inputData">Insira a data (dd/mm/yyyy):</label><br>
+    <label for="inputData">Data</label>
     <div style="display: flex; align-items: center; gap: 5px;">
         <button onclick="alterarData(-1)"><</button>
         <input type="text" id="inputData" placeholder="Ex: 01/01/2025" maxlength="10" value="" onfocus="if(!this.value) this.value = obterDataAtual();">
@@ -32,158 +39,6 @@
 
     <div id="resultado"></div>
 
-    <script>
-        // CONFIGURAÇÕES DA URL E FRASE
-        // Substitua esta URL pela que deseja consultar. O placeholder {CIDADE} e {DATA} serão substituídos.
-        const URL_BASE = "https://www.sanepar.com.br/utilidades-publicas/{CIDADE}-{DATA}/{CIDADE}"; 
-        
-        // Frase específica que você está procurando no conteúdo da página
-        const FRASE_ALVO = "OOPS! Precisa de ajuda para encontrar um conteúdo?";
-
-        let textoMontado = ""; // Variável inicializada fora do escopo do try-catch para uso global
-
-        async function iniciarProcesso() {
-            const inputCidade = document.getElementById('inputCidade').value;
-            const inputData = document.getElementById('inputData').value;
-            const resultadoDiv = document.getElementById('resultado');
-            
-            resultadoDiv.style.color = "";
-            resultadoDiv.innerText = "Consultando a Sanepar...";
-
-            // Formatar o nome da cidade
-            const cidadeFormatada = inputCidade.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, "-");
-
-            // 1. Validação simples do formato dd/mm/yyyy
-            if (!/^\d{2}\/\d{2}\/\d{4}$/.test(inputData)) {
-                resultadoDiv.innerText = "Erro: Por favor, insira a data no formato dd/mm/yyyy.";
-                return;
-            }
-
-            try {
-                // 2. Formatar data: de 'dd/mm/yyyy' para 'dd-mm-yyyy' (ou outro formato que a URL exija)
-                // O split quebra a string nas barras e o join junta com traços.
-                const dataFormatada = inputData.split('/').join('-'); 
-                // Nota: Ajustei para " de " pois a Wikipedia usa "25 de dezembro". 
-                // Para dd-mm-yyyy estrito, use: input.split('/').join('-');
-
-                // Inserir na URL específica
-                const urlAlvo = URL_BASE.replace(/{CIDADE}/g, cidadeFormatada).replace("{DATA}", dataFormatada);
-                console.log("URL Montada:", urlAlvo);
-
-                // 3. CONSULTA (CRAWLING)
-                // Usa o corsproxy.io que retorna o TEXTO puro, não JSON.
-                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(urlAlvo)}`;
-                var encontrou = true;
-                var textoMontado = "Existe possibilidade de falta d'água na cidade na data informada:\n";
-
-                try
-                {
-                    const response = await fetch(proxyUrl);
-                    
-                    if (!response.ok) {
-                        throw new Error(`Erro HTTP: ${response.status}`);
-                    }
-                
-                    const conteudoPagina = await response.text();  // Conteúdo HTML bruto da página alvo
-                    
-                    // Debug: Se quiser ver o que chegou, descomente a linha abaixo e olhe o Console (F12)
-                    // console.log(conteudoPagina);
-
-                    // 4. Verificar se a frase existe (Case insensitive - maiúsculas/minúsculas não importam)
-                    // Se quiser estrito, remova os .toLowerCase()
-                    encontrou = conteudoPagina.toLowerCase().includes(FRASE_ALVO.toLowerCase());
-
-                    if(!encontrou)
-                    {
-                        //Buscar tags específicas para montar um texto de retorno
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(conteudoPagina, 'text/html');
-
-                        // Buscar informações específicas
-                        const affectedLocationField = doc.querySelector('span.affected-location-field')?.textContent || "";
-                        const startDate = doc.querySelector('span.start-date')?.textContent || "";
-                        const dateReturn = doc.querySelector('span.date-return')?.textContent || "";
-
-                        const reasonTextWrapperDirect = doc.querySelector('div.reason-text-wrapper > span')?.textContent || "";
-                        const reasonTextWrapperNested = Array.from(doc.querySelectorAll('div.reason-text-wrapper div span'))
-                            .map(span => span.textContent.trim()) // Remove espaços antes e depois das frases
-                            .filter((value, index, self) => self.indexOf(value) === index && value !== "Motivo") // Remove duplicados e a linha "Motivo"
-                            .join('\n');
-
-                        const locationsTextWrapper = Array.from(doc.querySelectorAll('div.locations-text-wrapper span'))
-                            .map(span => span.textContent)
-                            .join('\n');
-
-                        const locationsTextWrapperDiv = doc.querySelector('div.locations-text-wrapper div')?.textContent || "";
-
-                        // Montar texto final
-                        textoMontado = `Local afetado: ${affectedLocationField}\nData de início: ${startDate}\nData de retorno: ${dateReturn}\n\nMotivo:\n${reasonTextWrapperDirect}\n${reasonTextWrapperNested}\n\n${locationsTextWrapper}\n${locationsTextWrapperDiv}`;
-                        
-                    }
-                }
-                catch (error)
-                {
-                    //throw new Error("Erro ao buscar a página via proxy: " + error.message);
-                    encontrou = true;
-                }
-
-                // 5. Retornar TRUE ou FALSE como frase
-                if (encontrou) {
-                    resultadoDiv.style.color = "green";
-                    resultadoDiv.innerText = `Não possui problemas de falta d'água`;
-                } else {
-                    resultadoDiv.style.color = "red";
-                    resultadoDiv.innerText = `${textoMontado}`;
-                }
-
-            } catch (error) {
-                console.error(error);
-                resultadoDiv.style.color = "orange";
-                resultadoDiv.innerText = "Ocorreu um erro ao tentar acessar a página. Verifique o console (F12) para detalhes.";
-            }
-        }
-
-        function obterDataAtual() {
-            const hoje = new Date();
-            const dia = String(hoje.getDate()).padStart(2, '0');
-            const mes = String(hoje.getMonth() + 1).padStart(2, '0'); // Janeiro é 0!
-            const ano = hoje.getFullYear();
-            return `${dia}/${mes}/${ano}`;
-        }
-
-        function alterarData(dias) {
-            const inputData = document.getElementById('inputData');
-            const partesData = inputData.value.split('/');
-
-            if (partesData.length === 3) {
-                const dia = parseInt(partesData[0], 10);
-                const mes = parseInt(partesData[1], 10) - 1; // Meses começam em 0 no objeto Date
-                const ano = parseInt(partesData[2], 10);
-
-                const data = new Date(ano, mes, dia);
-                data.setDate(data.getDate() + dias);
-
-                const novoDia = String(data.getDate()).padStart(2, '0');
-                const novoMes = String(data.getMonth() + 1).padStart(2, '0');
-                const novoAno = data.getFullYear();
-
-                inputData.value = `${novoDia}/${novoMes}/${novoAno}`;
-
-                // Acionar a consulta automaticamente
-                iniciarProcesso();
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            const inputData = document.getElementById('inputData');
-            const verificarButton = document.querySelector('button[onclick="iniciarProcesso()"]');
-
-            inputData.addEventListener('keypress', (event) => {
-                if (event.key === 'Enter') {
-                    verificarButton.click();
-                }
-            });
-        });
-    </script>
+    <script src="./script.js"></script>
 </body>
 </html>
