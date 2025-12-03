@@ -1,4 +1,4 @@
-    // CONFIGURAÇÕES DA URL E FRASE
+// CONFIGURAÇÕES DA URL E FRASE
     // Substitua esta URL pela que deseja consultar. O placeholder {CIDADE} e {DATA} serão substituídos.
     const URL_BASE = "https://www.sanepar.com.br/utilidades-publicas/{CIDADE}-{DATA}/{CIDADE}"; 
 
@@ -29,7 +29,7 @@
             // O split quebra a string nas barras e o join junta com traços.
             const dataFormatada = inputData.split('/').join('-'); 
             // Nota: Ajustei para " de " pois a Wikipedia usa "25 de dezembro". 
-            // Para dd-mm-yyyy estrito, use: input.split('/').join('-');
+            // Para dd-mm-yyyy estrito, use: input.split('/').join('-';
 
             // Inserir na URL específica
             const urlAlvo = URL_BASE.replace(/{CIDADE}/g, cidadeFormatada).replace("{DATA}", dataFormatada);
@@ -139,9 +139,15 @@
         }
     }
 
-    function validarCampos() {
+    async function validarCampos() {
         const inputCidade = document.getElementById('inputCidade').value.trim();
         const inputData = document.getElementById('inputData').value.trim();
+        const inputUF = document.getElementById('inputUF').value.trim();
+
+        if (!inputUF) {
+            alert('Por favor, preencha o campo UF.');
+            return;
+        }
 
         if (!inputCidade) {
             alert('Por favor, preencha o campo Cidade.');
@@ -153,12 +159,32 @@
             return;
         }
 
-        iniciarProcesso();
-    }    
+        try {
+            // Consultar API do IBGE para verificar se a cidade pertence à UF informada
+            const response = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${inputUF}/municipios`);
+
+            if (!response.ok) {
+                throw new Error('Erro ao consultar a API do IBGE.');
+            }
+
+            const municipios = await response.json();
+            const cidadesPermitidas = municipios.map(municipio => municipio.nome.toLowerCase());
+
+            if (!cidadesPermitidas.includes(inputCidade.toLowerCase())) {
+                alert(`A cidade informada não pertence à UF ${inputUF}.`);
+                return;
+            }
+
+            iniciarProcesso();
+        } catch (error) {
+            console.error('Erro ao validar a cidade:', error);
+            alert('Ocorreu um erro ao validar a cidade. Tente novamente mais tarde.');
+        }
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
         const inputData = document.getElementById('inputData');
-        const verificarButton = document.querySelector('button[onclick="iniciarProcesso()"]');
+        const verificarButton = document.getElementById('verificarButton');
 
         inputData.addEventListener('keypress', (event) => {
             if (event.key === 'Enter') {
