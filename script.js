@@ -1,19 +1,22 @@
-// CONFIGURAÇÕES DA URL E FRASE
-    // Substitua esta URL pela que deseja consultar. O placeholder {CIDADE} e {DATA} serão substituídos.
-    const URL_BASE = "https://www.sanepar.com.br/utilidades-publicas/{CIDADE}-{DATA}/{CIDADE}"; 
-
-    // Frase específica que você está procurando no conteúdo da página
-    const FRASE_ALVO = "OOPS! Precisa de ajuda para encontrar um conteúdo?";
+    // Transformando o array para incluir nome e URL
+    const CONCESSIONARIAS = {
+        "PR": {
+            Nome: "Sanepar",
+            URL: "https://www.sanepar.com.br/utilidades-publicas/{CIDADE}-{DATA}/{CIDADE}",
+            Texto: "OOPS! Precisa de ajuda para encontrar um conteúdo?"
+        }
+    };
 
     let textoMontado = ""; // Variável inicializada fora do escopo do try-catch para uso global
 
     async function iniciarProcesso() {
         const inputCidade = document.getElementById('inputCidade').value;
         const inputData = document.getElementById('inputData').value;
+        const inputUF = document.getElementById('inputUF').value.trim();
         const resultadoDiv = document.getElementById('resultado');
         
         resultadoDiv.style.color = "";
-        resultadoDiv.innerText = "Consultando a Sanepar...";
+        resultadoDiv.innerText = `Consultando a ${CONCESSIONARIAS[inputUF]?.Nome}...`;
 
         // Formatar o nome da cidade
         const cidadeFormatada = inputCidade.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, "-");
@@ -25,14 +28,8 @@
         }
 
         try {
-            // 2. Formatar data: de 'dd/mm/yyyy' para 'dd-mm-yyyy' (ou outro formato que a URL exija)
-            // O split quebra a string nas barras e o join junta com traços.
             const dataFormatada = inputData.split('/').join('-'); 
-            // Nota: Ajustei para " de " pois a Wikipedia usa "25 de dezembro". 
-            // Para dd-mm-yyyy estrito, use: input.split('/').join('-';
-
-            // Inserir na URL específica
-            const urlAlvo = URL_BASE.replace(/{CIDADE}/g, cidadeFormatada).replace("{DATA}", dataFormatada);
+            const urlAlvo = CONCESSIONARIAS[inputUF]?.URL.replace(/{CIDADE}/g, cidadeFormatada).replace("{DATA}", dataFormatada);
             console.log("URL Montada:", urlAlvo);
 
             // 3. CONSULTA (CRAWLING)
@@ -56,7 +53,7 @@
 
                 // 4. Verificar se a frase existe (Case insensitive - maiúsculas/minúsculas não importam)
                 // Se quiser estrito, remova os .toLowerCase()
-                encontrou = conteudoPagina.toLowerCase().includes(FRASE_ALVO.toLowerCase());
+                encontrou = conteudoPagina.toLowerCase().includes(CONCESSIONARIAS[inputUF]?.Texto.toLowerCase());
 
                 if(!encontrou)
                 {
@@ -95,7 +92,7 @@
             // 5. Retornar TRUE ou FALSE como frase
             if (encontrou) {
                 resultadoDiv.style.color = "green";
-                resultadoDiv.innerText = `Não existe registro de falta de água para a cidade na data informada.`;
+                resultadoDiv.innerText = `${inputCidade}-${inputUF} - Não existe registro de falta de água em ${inputData}.`;
             } else {
                 resultadoDiv.style.color = "red";
                 resultadoDiv.innerText = `${textoMontado}`;
