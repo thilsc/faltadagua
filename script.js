@@ -95,7 +95,7 @@
             // 5. Retornar TRUE ou FALSE como frase
             if (encontrou) {
                 resultadoDiv.style.color = "green";
-                resultadoDiv.innerText = `Não possui problemas de falta d'água`;
+                resultadoDiv.innerText = `Não existe registro de falta de água para a cidade na data informada.`;
             } else {
                 resultadoDiv.style.color = "red";
                 resultadoDiv.innerText = `${textoMontado}`;
